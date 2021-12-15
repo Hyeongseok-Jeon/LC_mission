@@ -155,7 +155,7 @@ class udp_sender:
         elif self.data_type == 'set_traffic':
             packed_traffic_index = data[0].encode()
             packed_traffic_status = struct.pack('h', data[1])
-            lower = packed_automode + packed_traffic_index + packed_traffic_status
+            lower = packed_traffic_index + packed_traffic_status
             send_data = self.upper + lower + self.tail
 
         elif self.data_type == 'multi_ego':
