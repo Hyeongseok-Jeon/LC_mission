@@ -17,7 +17,10 @@
             "get_traffic_light_dst_port": 7502,
 
             "set_traffic_light_host_port": 7603,
-            "set_traffic_light_dst_port": 7503
+            "set_traffic_light_dst_port": 7503,
+
+            "ego_ctrl_host_port": 9103,
+            "ego_ctrl_dst_port": 9104
         }
 
 }
