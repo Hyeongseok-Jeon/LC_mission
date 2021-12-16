@@ -1,6 +1,6 @@
 import numpy as np
 from math import cos,sin, radians
-
+import numpy.matlib as npm
 class StanleyController:
     def __init__(self, k=0.5, wheelbase=2.8, polynomial_order=3):
         # control agin
@@ -29,16 +29,16 @@ class StanleyController:
         self.vehicle_position[1] = status_msg['y'] + self.wheelbase * np.sin(self.vehicle_angle)
 
     def set_path(self, path_msg):
-        x = [poses.pose.position.x for poses in path_msg.poses]
-        y = [poses.pose.position.y for poses in path_msg.poses]
-        self.path = np.matrix([x, y])
+        x = [row[0] for row in path_msg]
+        y = [row[1] for row in path_msg]
+        self.path = np.array([x, y])
 
     def steering_angle(self):
         R = np.matrix(
             [[cos(-self.vehicle_angle), -sin(-self.vehicle_angle)],
              [sin(-self.vehicle_angle), cos(-self.vehicle_angle)]]
         )
-        local_path = self.path - np.matlib.repmat(self.vehicle_position, 1, self.path.shape[1])
+        local_path = self.path - np.tile(self.vehicle_position, (1, self.path.shape[1]))
         rotated_local_path = R.dot(local_path)
 
         path_coefficients = np.polyfit(
