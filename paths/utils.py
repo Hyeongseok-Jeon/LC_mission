@@ -81,5 +81,4 @@ class pathReader:
                     out_path = out_path + points
                 else:
                     out_path = out_path + points[1:]
-
-        return out_path
+        return out_path, links, mgeos

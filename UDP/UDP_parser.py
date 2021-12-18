@@ -2,10 +2,11 @@ import socket
 import threading
 import time
 import struct
-
+import numpy as np
 
 class udp_parser:
-    def __init__(self, ip, port, data_type):
+    def __init__(self, ip, port, data_type, mgeo):
+        self.mgeo = mgeo
         self.data_type = data_type
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         recv_address = (ip, port)
@@ -44,10 +45,12 @@ class udp_parser:
 
                 data_1 = ctrl_mode, gear, signed_vel, map_id, accel, brake, size_x, size_y, size_z, overhang, wheelbase, rear_overhang
                 data_2 = pose_x, pose_y, pose_z, roll, pitch, yaw, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, steer
-
+                link_id, lind_index = self.get_cur_link([pose_x, pose_y])
                 unpacked_data = data_1 + data_2
 
                 self.parsed_data = list(unpacked_data)
+                self.parsed_data.append(link_id)
+                self.parsed_data.append(lind_index)
 
 
         elif self.data_type == 'obj':
@@ -102,6 +105,13 @@ class udp_parser:
         self.sock.close()
         print('del')
 
+    def get_cur_link(self, pos):
+        pos = np.asarray(pos)
+        min_dist = []
+        for i in range(len(self.mgeo)):
+            points = np.asarray(self.mgeo[i]['points'])[:,:2]
+            min_dist.append(np.min(np.linalg.norm(points-pos, axis=1)))
+        return self.mgeo[np.argmin(min_dist)]['idx'], np.argmin(min_dist)
 
 class udp_sender:
     def __init__(self, ip, port, data_type):
