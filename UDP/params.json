@@ -20,7 +20,10 @@
             "set_traffic_light_dst_port": 7503,
 
             "ego_ctrl_host_port": 9103,
-            "ego_ctrl_dst_port": 9104
+            "ego_ctrl_dst_port": 9104,
+
+            "scenario_load_host_port" : 9099,
+			"scenario_load_dst_port" : 9100
         }
 
 }

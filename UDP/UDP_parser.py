@@ -132,10 +132,11 @@ class udp_sender:
             self.tail = '\r\n'.encode()
 
         elif self.data_type == 'scenario':
-            header = struct.pack('III', 77, 79, 82)
-
-            self.upper = header
-            self.tail = struct.pack('II', 65, 73)
+            header = '#ScenarioLoad$'.encode()
+            data_length = struct.pack('i', 37)
+            aux_data = struct.pack('iii', 0, 0, 0)
+            self.upper = header + data_length + aux_data
+            self.tail = '\r\n'.encode()
 
     def send_data(self, data):
 
@@ -159,7 +160,6 @@ class udp_sender:
             send_data = self.upper + lower + self.tail
 
         elif self.data_type == 'multi_ego':
-
             num_of_ego = len(data)
             camera_index = 0
             packed_num_of_ego = struct.pack('i', num_of_ego)
@@ -186,9 +186,16 @@ class udp_sender:
             send_data = self.upper + packed_num_of_ego + packed_camera_index + lower
 
         elif self.data_type == 'scenario':
-            packed_data = struct.pack('IIIII', data[0], data[1], data[2], data[3], data[4])
-            lower = packed_data
+            packed_scenario_name = data[0].encode()
+            packed_delete_all = struct.pack('b', data[1])
+            packed_network = struct.pack('b', data[2])
+            packed_ego_vehicle = struct.pack('b', data[3])
+            packed_npc_vehicle = struct.pack('b', data[4])
+            packed_pedestrian = struct.pack('b', data[5])
+            packed_object = struct.pack('b', data[6])
+            packed_pause= struct.pack('b', data[7])
+
+            lower = packed_scenario_name + packed_delete_all + packed_network + packed_ego_vehicle + packed_npc_vehicle + packed_pedestrian + packed_object + packed_pause
             send_data = self.upper + lower + self.tail
-            print(len(send_data), send_data)
 
         self.sock.sendto(send_data, (self.ip, self.port))
