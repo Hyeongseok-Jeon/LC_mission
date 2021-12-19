@@ -53,4 +53,4 @@ class StanleyController:
         theta_heading = np.arctan(np.polyval(path_coefficients_derivative, 0))
 
         theta = theta_distance + theta_heading
-        return theta
+        return theta, lateral_offset
