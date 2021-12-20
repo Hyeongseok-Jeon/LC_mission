@@ -19,7 +19,7 @@ class lane_changer:
 
     def get_lc_goal_cands(self, phase):
         if phase == 0:
-            right_link = mgeos[self.ego_link_index]['right_lane_change_dst_link_idx']
+            right_link = self.mgeos[self.ego_link_index]['right_lane_change_dst_link_idx']
             if right_link != None:
                 new_global_link = []
                 right_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['idx'] == right_link][0]
