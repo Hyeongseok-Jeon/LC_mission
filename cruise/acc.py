@@ -1,5 +1,5 @@
 
-def control(speed=0, acceleration=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
+def control(speed=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
         """Adaptive Cruise Control
            speed: Current car speed (m/s)
            acceleration: Current car acceleration (m/s^2)
