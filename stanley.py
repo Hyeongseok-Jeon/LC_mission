@@ -22,7 +22,7 @@ class StanleyController:
         ego_status['heading'] = ego_data[17]
 
         '''
-        self.current_vel = status_msg['vel'] / 3.6  # m/s
+        self.vehicle_velocity = status_msg['vel'] # m/s
         self.vehicle_angle = radians(status_msg['heading'])
         # rear to front wheel position
         self.vehicle_position[0] = status_msg['x'] + self.wheelbase * np.cos(self.vehicle_angle)
@@ -49,7 +49,7 @@ class StanleyController:
         path_coefficients_derivative = np.polyder(path_coefficients)
 
         lateral_offset = np.polyval(path_coefficients, 0)
-        theta_distance = np.arctan2(self.k * lateral_offset, self.current_vel)
+        theta_distance = np.arctan2(self.k * lateral_offset, self.vehicle_velocity)
         theta_heading = np.arctan(np.polyval(path_coefficients_derivative, 0))
 
         theta = theta_distance + theta_heading

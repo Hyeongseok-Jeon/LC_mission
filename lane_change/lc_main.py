@@ -24,28 +24,76 @@ class lane_changer:
                 new_global_link = []
                 right_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['idx'] == right_link][0]
                 right_link_to_node = self.mgeos[right_link_index]['to_node_idx']
+
                 right_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == right_link_to_node][0]
-                right_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_link_index]['to_node_idx']][0]
-                right_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_link_index]['to_node_idx']][0]
-                right_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_link_index]['to_node_idx']][0]
-                right_front_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_front_link_index]['to_node_idx']][0]
-                right_front_front_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_front_front_link_index]['to_node_idx']][0]
-
-                new_global_link.append(self.mgeos[right_link_index]['idx'])
                 new_global_link.append(self.mgeos[right_front_link_index]['idx'])
-                new_global_link.append(self.mgeos[right_front_front_link_index]['idx'])
-                new_global_link.append(self.mgeos[right_front_front_front_link_index]['idx'])
-                new_global_link.append(self.mgeos[right_front_front_front_front_link_index]['idx'])
-                new_global_link.append(self.mgeos[right_front_front_front_front_front_link_index]['idx'])
-                new_global_link.append(self.mgeos[right_front_front_front_front_front_front_link_index]['idx'])
+                try:
+                    right_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_link_index]['to_node_idx']][0]
+                    new_global_link.append(self.mgeos[right_front_front_link_index]['idx'])
+                except:
+                    pass
+                try:
+                    right_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_link_index]['to_node_idx']][0]
+                    new_global_link.append(self.mgeos[right_front_front_front_link_index]['idx'])
+                except:
+                    pass
+                try:
+                    right_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_link_index]['to_node_idx']][0]
+                    new_global_link.append(self.mgeos[right_front_front_front_front_link_index]['idx'])
+                except:
+                    pass
+                try:
+                    right_front_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_front_link_index]['to_node_idx']][0]
+                    new_global_link.append(self.mgeos[right_front_front_front_front_front_link_index]['idx'])
+                except:
+                    pass
+                try:
+                    right_front_front_front_front_front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[right_front_front_front_front_front_link_index]['to_node_idx']][0]
+                    new_global_link.append(self.mgeos[right_front_front_front_front_front_front_link_index]['idx'])
+                except:
+                    pass
 
-                points = np.asarray(self.mgeos[right_link_index]['points'] +
-                                    self.mgeos[right_front_link_index]['points'][1:] +
-                                    self.mgeos[right_front_front_link_index]['points'][1:] +
-                                    self.mgeos[right_front_front_front_link_index]['points'][1:] +
-                                    self.mgeos[right_front_front_front_front_link_index]['points'][1:] +
-                                    self.mgeos[right_front_front_front_front_front_link_index]['points'][1:] +
-                                    self.mgeos[right_front_front_front_front_front_front_link_index]['points'][1:])[:, :2]
+                try:
+                    points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                        self.mgeos[right_front_link_index]['points'][1:] +
+                                        self.mgeos[right_front_front_link_index]['points'][1:] +
+                                        self.mgeos[right_front_front_front_link_index]['points'][1:] +
+                                        self.mgeos[right_front_front_front_front_link_index]['points'][1:] +
+                                        self.mgeos[right_front_front_front_front_front_link_index]['points'][1:] +
+                                        self.mgeos[right_front_front_front_front_front_front_link_index]['points'][1:])[:, :2]
+                except:
+                    try:
+                        points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                            self.mgeos[right_front_link_index]['points'][1:] +
+                                            self.mgeos[right_front_front_link_index]['points'][1:] +
+                                            self.mgeos[right_front_front_front_link_index]['points'][1:] +
+                                            self.mgeos[right_front_front_front_front_link_index]['points'][1:] +
+                                            self.mgeos[right_front_front_front_front_front_link_index]['points'][1:])[:, :2]
+                    except:
+                        try:
+                            points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                                self.mgeos[right_front_link_index]['points'][1:] +
+                                                self.mgeos[right_front_front_link_index]['points'][1:] +
+                                                self.mgeos[right_front_front_front_link_index]['points'][1:] +
+                                                self.mgeos[right_front_front_front_front_link_index]['points'][1:])[:, :2]
+                        except:
+                            try:
+                                points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                                    self.mgeos[right_front_link_index]['points'][1:] +
+                                                    self.mgeos[right_front_front_link_index]['points'][1:] +
+                                                    self.mgeos[right_front_front_front_link_index]['points'][1:])[:, :2]
+                            except:
+                                try:
+                                    points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                                        self.mgeos[right_front_link_index]['points'][1:] +
+                                                        self.mgeos[right_front_front_link_index]['points'][1:])[:, :2]
+                                except:
+                                    try:
+                                        points = np.asarray(self.mgeos[right_link_index]['points'] +
+                                                            self.mgeos[right_front_link_index]['points'][1:])[:, :2]
+                                    except:
+                                        points = np.asarray(self.mgeos[right_link_index]['points'])[:, :2]
+
                 points_t = np.matmul(self.rot, (points - self.ego_pos[:2]).T).T
                 points_t = points_t[points_t[:, 0] > 0, :]
 
@@ -100,15 +148,17 @@ class lane_changer:
 
                 x = np.poly1d([x3, x2, x1, x0])
                 y = np.poly1d([y3, y2, y1, y0])
-                t = np.linspace(0, self.t_lc[t_lc_idx], self.t_lc[t_lc_idx]*10+1)
+                t = np.linspace(0, self.t_lc[t_lc_idx], self.t_lc[t_lc_idx]*100+1)
                 LC_path = np.asarray([x(t), y(t)]).T
 
                 new_end = points[np.argmin(np.linalg.norm(points - LC_path[-1], axis=1)):]
-                new_global_path = [list(i) for i in self.global_path[:nearest_idx]] + [list(i) for i in LC_path] + [list(i) for i in new_end]
+                new_global_path = [list(i) for i in self.global_path[:nearest_idx+20]] + [list(i) for i in LC_path] + [list(i) for i in new_end]
                 # new_global_path = 'test'
             else:
                 new_global_path = self.global_path
                 new_global_link = self.global_link
+            self.global_path = new_global_path
+            self.global_link = new_global_link
             return new_global_path, new_global_link, 1
 
     def set_veh_info_ego_cordinate(self, data):
@@ -131,3 +181,4 @@ class lane_changer:
 
     def get_global_path(self):
         return self.global_path
+
