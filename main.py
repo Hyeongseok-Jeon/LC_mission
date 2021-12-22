@@ -30,6 +30,10 @@ scene_port = params["scenario_load_host_port"]
 
 path_reader = pathReader()
 global_path, global_link, mgeos = path_reader.read('jeju_airport.json')
+# from matplotlib import pyplot as plt
+# for i in range(len(mgeos)):
+#     points = np.asarray(mgeos[i]['points'])
+#     plt.scatter(points[:, 0], points[:, 1],color='k')
 
 sur = udp_parser(user_ip, object_port, 'obj', mgeos)
 ego = udp_parser(user_ip, ego_port, 'status', mgeos)
