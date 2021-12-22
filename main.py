@@ -34,6 +34,7 @@ global_path, global_link, mgeos = path_reader.read('jeju_airport.json')
 # for i in range(len(mgeos)):
 #     points = np.asarray(mgeos[i]['points'])
 #     plt.scatter(points[:, 0], points[:, 1],color='k')
+#     plt.axis('equal')
 
 sur = udp_parser(user_ip, object_port, 'obj', mgeos)
 ego = udp_parser(user_ip, ego_port, 'status', mgeos)
@@ -78,27 +79,27 @@ while True:
     LC_manager.set_ego_info(ego_status)
     target_idx = LC_manager.set_veh_info_ego_cordinate(sur_data)
 
-    if ego_status['link_id'] == '{b40ad01a-81ba-4a82-b214-ea94d56bf98f}' and LC_phase == 3:
-        LC_phase = 0
+    if LC_cnt < 4:
+        if ego_status['link_id'] == '{b40ad01a-81ba-4a82-b214-ea94d56bf98f}' and LC_phase == 3:
+            LC_phase = 0
 
-    if LC_phase == 0:
-        print('here')
-        LC_cnt = LC_cnt + 1
-        # if LC_cnt == 2:
-        #     break
-        # from matplotlib import pyplot as plt
-        # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1])
-        # plt.scatter(ego_status['x'], ego_status['y'])
-        global_path, global_link_new, LC_phase = LC_manager.get_lc_goal_cands(LC_phase)
-        # plt.plot(np.asarray(LC_manager.global_path)[:,0], np.asarray(LC_manager.global_path)[:,1])
-        # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1])
-    elif LC_phase == 1:
-        global_link = global_link_new
-        if ego_status['link_id'] in global_link:
-            dist_to_link = np.min(np.linalg.norm(np.asarray(mgeos[ego_status['link_index']]['points'])[:,:2] - np.asarray([ego_status['x'], ego_status['y']]), axis=1))
-            if dist_to_link < 0.3:
-                LC_phase = 0
-
+        if LC_phase == 0:
+            print('here')
+            LC_cnt = LC_cnt + 1
+            # from matplotlib import pyplot as plt
+            # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1], s = 1)
+            # plt.scatter(ego_status['x'], ego_status['y'])
+            global_path, global_link_new, LC_phase = LC_manager.get_lc_goal_cands(LC_phase)
+            # plt.plot(np.asarray(LC_manager.global_path)[:,0], np.asarray(LC_manager.global_path)[:,1])
+            # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1])
+        elif LC_phase == 1:
+            global_link = global_link_new
+            if ego_status['link_id'] in global_link:
+                dist_to_link = np.min(np.linalg.norm(np.asarray(mgeos[ego_status['link_index']]['points'])[:,:2] - np.asarray([ego_status['x'], ego_status['y']]), axis=1))
+                if dist_to_link < 0.3:
+                    LC_phase = 0
+    else:
+        pass
     local_path, current_waypoint = findLocalPath(global_path, ego_status['x'], ego_status['y'])
     # plt.scatter(np.asarray(local_path)[:,0], np.asarray(local_path)[:,1])
 
@@ -109,7 +110,7 @@ while True:
 
     dist_to_target = np.sqrt((sur_status['x'] - ego_status['x']) ** 2 + (sur_status['y'] - ego_status['y']) ** 2)
     # print(ego_status['vel']*3.6)
-    brake, gas, control, state = acc(ego_status['vel'], car_in_front=dist_to_target, cruise_speed=30 / 3.6, state=state)
+    brake, gas, control, state = acc(ego_status['vel'], car_in_front=dist_to_target, cruise_speed=50 / 3.6, state=state)
     ctrl_mode = 2  # 2 = AutoMode / 1 = KeyBoard
     Gear = 4  # 4 1 : (P / parking ) 2 (R / reverse) 3 (N / Neutral)  4 : (D / Drive) 5 : (L)
     cmd_type = 1  # 1 : Throttle  /  2 : Velocity  /  3 : Acceleration

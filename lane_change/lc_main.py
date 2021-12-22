@@ -3,7 +3,7 @@ import threading
 
 
 class lane_changer:
-    def __init__(self, mgeos, global_path, global_link, lateral_acc_limit=0.5, t_lc=[2, 3, 4, 5], accs=[-0, 5, 0, 0.5], predictor='cv'):
+    def __init__(self, mgeos, global_path, global_link, lateral_acc_limit=0.5, t_lc=[2, 3, 4, 5], accs=[-0.5, 0, 0.5], predictor='cv'):
         self.t_lc = t_lc
         self.global_link = global_link
         self.global_path = np.asarray(global_path)[:, :2]
@@ -16,15 +16,17 @@ class lane_changer:
         self.ego_link = None
         self.ego_link_index = 159
         self.rot = None
+        self.last_point = [117.8864124831982, 341.979038732088]
+        self.end_sig = 0
 
     def get_lc_goal_cands(self, phase):
         if phase == 0:
             right_link = self.mgeos[self.ego_link_index]['right_lane_change_dst_link_idx']
+            new_global_link = []
+            new_global_link.append(right_link)
             if right_link != None:
-                new_global_link = []
                 right_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['idx'] == right_link][0]
                 right_link_to_node = self.mgeos[right_link_index]['to_node_idx']
-
                 right_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == right_link_to_node][0]
                 new_global_link.append(self.mgeos[right_front_link_index]['idx'])
                 try:
@@ -97,9 +99,18 @@ class lane_changer:
                 points_t = np.matmul(self.rot, (points - self.ego_pos[:2]).T).T
                 points_t = points_t[points_t[:, 0] > 0, :]
 
-                max_travel_dist = self.ego_data['vel'] * self.t_lc[2] + 0.5 * 0.5 * 9.8 * self.t_lc[2] ** 2
+                max_travel_dist = self.ego_data['vel'] * self.t_lc[2] + 0.5 * 0.3 * 9.8 * self.t_lc[2] ** 2
                 points_t = points_t[np.linalg.norm(points_t, axis=1) < max_travel_dist, :]
                 points_t_global = np.matmul(np.linalg.inv(self.rot), points_t.T).T + self.ego_pos[:2]
+                if len(np.where(points_t_global[:,0] == self.last_point[0])[0]) == 1:
+                    target_point_idx = np.where(points_t_global[:,0] == self.last_point[0])[0][0]
+                    self.end_sig = 1
+                else:
+                    '''
+                    select target point index based on the prediction result
+                    min point index = 60
+                    '''
+                    target_point_idx = -1
 
                 # for i in range(len(points_t_global)):
                 #     for j in range(len(self.accs)):
@@ -121,12 +132,15 @@ class lane_changer:
                 #         y1 = self.ego_data['vel_y']
                 #         y3 = (vy_f - points_t_global[i,1] + y0 + y1)/4
                 #         y2 = (vy_f - y1 -12*y3)/4
-                target_point_idx = -1
                 acc_idx = 1
                 t_lc_idx = 2
                 if target_point_idx == 0:
                     head_f = np.arctan2(points_t_global[target_point_idx + 1, 1] - points_t_global[target_point_idx, 1], points_t_global[target_point_idx + 1, 0] - points_t_global[target_point_idx, 0])
                     v_f = self.ego_data['vel'] + self.t_lc[t_lc_idx] * self.accs[acc_idx]
+                elif self.end_sig == 1:
+                    head_f = np.arctan2(points_t_global[target_point_idx, 1] - points_t_global[target_point_idx - 1, 1], points_t_global[target_point_idx, 0] - points_t_global[target_point_idx - 1, 0])
+                    s = np.linalg.norm(points_t_global[target_point_idx] - self.ego_pos[:2])
+                    v_f = np.sqrt(2*self.accs[acc_idx]*s + self.ego_data['vel']**2)
                 else:
                     head_f = np.arctan2(points_t_global[target_point_idx, 1] - points_t_global[target_point_idx - 1, 1], points_t_global[target_point_idx, 0] - points_t_global[target_point_idx - 1, 0])
                     v_f = self.ego_data['vel'] + self.t_lc[t_lc_idx] * self.accs[acc_idx]
@@ -134,7 +148,7 @@ class lane_changer:
                 vy_f = v_f * np.sin(head_f)
 
                 nearest_idx = np.argmin(np.linalg.norm(self.global_path - np.asarray([self.ego_data['x'], self.ego_data['y']]), axis=1))
-                near_pt = self.global_path[nearest_idx+20]
+                near_pt = self.global_path[nearest_idx+5]
 
                 x0 = near_pt[0]
                 x1 = self.ego_data['vel'] * np.cos(np.deg2rad(self.ego_data['heading']))
@@ -152,7 +166,7 @@ class lane_changer:
                 LC_path = np.asarray([x(t), y(t)]).T
 
                 new_end = points[np.argmin(np.linalg.norm(points - LC_path[-1], axis=1)):]
-                new_global_path = [list(i) for i in self.global_path[:nearest_idx+20]] + [list(i) for i in LC_path] + [list(i) for i in new_end]
+                new_global_path = [list(i) for i in self.global_path[:nearest_idx+5]] + [list(i) for i in LC_path] + [list(i) for i in new_end]
                 # new_global_path = 'test'
             else:
                 new_global_path = self.global_path
