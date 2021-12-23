@@ -31,7 +31,9 @@ class lane_changer:
                 self.fut_traj = np.repeat(self.hist_traj[:, -1:, :], 20, axis = 1)
 
             if self.predictor == 'cv':
-                
+                cur_pos = self.hist_traj[:,-1,:]
+                for i in range(len(cur_pos)):
+                    self.fut_traj[i] = 
 
 
     def get_lc_goal_cands(self, phase):
@@ -254,7 +256,6 @@ class lane_changer:
 
 
     def get_LK_path(self, pos):
-        pos = np.asarray(pos)
         min_dist = []
         for i in range(len(self.mgeo)):
             points = np.asarray(self.mgeo[i]['points'])[:, :2]
