@@ -55,8 +55,8 @@ LC_phase = 3
 LC_cnt = 0
 
 while True:
-    try:
-        sur_data = sur.get_data()
+    # try:
+        sur_data = sur.get_data().copy()
         sur_status['id'] = sur_data[0][0]
         sur_status['x'] = sur_data[0][2]
         sur_status['y'] = sur_data[0][3]
@@ -77,6 +77,11 @@ while True:
         ego_status['link_id'] = ego_data[-2]
         ego_status['link_index'] = ego_data[-1]
         LC_manager.set_ego_info(ego_status)
+        # 나중에 업데이트되면 삭제하기
+        ego_in_sur = [0, -1, ego_data[12],  ego_data[13],  ego_data[14], ego_data[17], ego_data[6], ego_data[7], ego_data[8],
+                      ego_data[9], ego_data[10], ego_data[11], ego_data[18], ego_data[19], ego_data[20], ego_data[21], ego_data[22], ego_data[23]]
+        sur_data.append(ego_in_sur)
+        #
         target_idx = LC_manager.set_veh_info_ego_cordinate(sur_data)
 
         if LC_cnt < 4:
