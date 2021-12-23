@@ -48,14 +48,12 @@ path_tracker = StanleyController()
 ego_status = dict()
 sur_status = dict()
 
-time.sleep(2)
 scenario_load.send_data(['1_LC_mission                  ', False, True, True, True, True, True, False])
 # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 state = None
 LC_phase = 3
 LC_cnt = 0
 
-time.sleep(2)
 while True:
     try:
         sur_data = sur.get_data()

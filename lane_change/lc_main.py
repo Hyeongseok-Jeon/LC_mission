@@ -18,6 +18,13 @@ class lane_changer:
         self.rot = None
         self.last_point = [117.8864124831982, 341.979038732088]
         self.end_sig = 0
+        self.sur_data = []
+        
+    def prediction(self):
+        while True:
+            if self.predictor = 'none':
+
+            if self.predictor = 'cv'
 
     def get_lc_goal_cands(self, phase):
         if phase == 0:
@@ -176,6 +183,7 @@ class lane_changer:
             return new_global_path, new_global_link, 1
 
     def set_veh_info_ego_cordinate(self, data):
+        self.sur_data = data
         sur_pos_data = np.zeros(shape=(len(data), 2))
         for i in range(len(sur_pos_data)):
             sur_pos_data[i, 0] = data[i][2]
