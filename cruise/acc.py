@@ -1,3 +1,28 @@
+import numpy as np
+
+def get_target(link_list, sur_data, ego_data, mgeos):
+    ego_pt_index = np.argmin(np.linalg.norm(np.asarray(mgeos[ego_data[-1]]['points'])[:,:2] - np.asarray([ego_data[12], ego_data[13]]), axis=1))
+    sur_pos = []
+    for ii in range(len(sur_data)):
+        type = sur_data[ii][1]
+        if type != -1:
+            pos = np.asarray([sur_data[ii][2], sur_data[ii][3]])
+            min_dist = []
+            for i in range(len(mgeos)):
+                points = np.asarray(mgeos[i]['points'])[:,:2]
+                min_dist.append(np.min(np.linalg.norm(points-pos, axis=1)))
+            if mgeos[np.argmin(min_dist)]['idx'][1:-1] in link_list:
+                if link_list.index(mgeos[np.argmin(min_dist)]['idx'][1:-1]) == 0:
+                    sur_pt_index = np.argmin(np.linalg.norm(np.asarray(mgeos[ego_data[-1]]['points'])[:,:2] - pos, axis=1))
+                    if sur_pt_index > ego_pt_index:
+                        sur_pos.append([sur_data[ii][2], sur_data[ii][3]])
+                else:
+                    sur_pos.append([sur_data[ii][2], sur_data[ii][3]])
+    if len(sur_pos) == 0:
+        pt = None
+    else:
+        pt = np.asarray(sur_pos)[np.argmin(np.linalg.norm(np.asarray(sur_pos) - np.asarray([ego_data[12], ego_data[13]]), axis=1))]
+    return pt
 
 def control(speed=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
         """Adaptive Cruise Control
