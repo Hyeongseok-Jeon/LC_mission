@@ -33,7 +33,7 @@ class lane_changer:
             if self.predictor == 'cv':
                 cur_pos = self.hist_traj[:,-1,:]
                 for i in range(len(cur_pos)):
-                    self.fut_traj[i] = 
+                    LK_path = self.get_LK_path(cur_pos[i])
 
 
     def get_lc_goal_cands(self, phase):
@@ -221,7 +221,7 @@ class lane_changer:
         self.target_id = data[self.target_idx[0][0]][0]
 
         num_other_veh = 0
-        self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 2))
+        self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 3))
         for k in range(len(self.sur_data[-1])):
             id = self.sur_data[-1][k][0]
             if self.sur_data[-1][k][1] == -1:
@@ -236,8 +236,10 @@ class lane_changer:
                 veh_idx = [self.sur_data[index][j][0] for j in range(len(self.sur_data[index]))].index(id)
                 x = self.sur_data[index][veh_idx][2]
                 y = self.sur_data[index][veh_idx][3]
+                v = np.sqrt(self.sur_data[index][veh_idx][13]**2 + self.sur_data[index][veh_idx][13]**2)
                 self.hist_traj[row, index, 0] = x
                 self.hist_traj[row, index, 1] = y
+                self.hist_traj[row, index, 2] = v
 
         '''
         sur_status['x'] = sur_data[0][2]
@@ -257,23 +259,23 @@ class lane_changer:
 
     def get_LK_path(self, pos):
         min_dist = []
-        for i in range(len(self.mgeo)):
-            points = np.asarray(self.mgeo[i]['points'])[:, :2]
+        for i in range(len(LC_manager.mgeos)):
+            points = np.asarray(LC_manager.mgeos[i]['points'])[:, :2]
             min_dist.append(np.min(np.linalg.norm(points - pos, axis=1)))
         LK_links = []
 
-        cur_link = self.mgeo[np.argmin(min_dist)]['idx']
+        cur_link = LC_manager.mgeos[np.argmin(min_dist)]['idx']
         LK_links.append(cur_link)
         cur_index = np.argmin(min_dist)
-        cur_link_to_node = self.mgeos[cur_index]['to_node_idx']
-        front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == cur_link_to_node][0]
-        LK_links.append(self.mgeos[front_link_index]['idx'])
-        front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[front_link_index]['to_node_idx']][0]
-        LK_links.append(self.mgeos[front_front_link_index]['idx'])
+        cur_link_to_node = LC_manager.mgeos[cur_index]['to_node_idx']
+        front_link_index = [i for i in range(len(LC_manager.mgeos)) if LC_manager.mgeos[i]['from_node_idx'] == cur_link_to_node][0]
+        LK_links.append(LC_manager.mgeos[front_link_index]['idx'])
+        front_front_link_index = [i for i in range(len(LC_manager.mgeos)) if LC_manager.mgeos[i]['from_node_idx'] == LC_manager.mgeos[front_link_index]['to_node_idx']][0]
+        LK_links.append(LC_manager.mgeos[front_front_link_index]['idx'])
 
-        LK_points = np.asarray(self.mgeos[cur_index]['points'] +
-                            self.mgeos[front_link_index]['points'][1:] +
-                            self.mgeos[front_front_link_index]['points'][1:])[:, :2]
+        LK_points = np.asarray(LC_manager.mgeos[cur_index]['points'] +
+                            LC_manager.mgeos[front_link_index]['points'][1:] +
+                            LC_manager.mgeos[front_front_link_index]['points'][1:])[:, :2]
 
         nearest_next_pos = np.argmin(np.linalg.norm(LK_points - pos, axis=1))
         return LK_points
