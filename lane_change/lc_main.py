@@ -13,7 +13,6 @@ class lane_changer:
         self.predictor = predictor
         self.mgeos = mgeos
         self.target_idx = None
-        self.target_id = None
         self.ego_pos = None
         self.ego_link = None
         self.ego_link_index = 159
@@ -22,19 +21,66 @@ class lane_changer:
         self.end_sig = 0
         self.sur_data = []
         self.sur_data_time = []
-
+        self.fut_traj = np.zeros(shape=(0, 20, 2))
 
     def prediction(self):
-        while True:
+        if self.predictor == 'none':
             self.fut_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 2))
-            if self.predictor == 'none':
-                self.fut_traj = np.repeat(self.hist_traj[:, -1:, :], 20, axis = 1)
+            self.fut_traj = np.repeat(self.hist_traj[:, -1:, :], 20, axis = 1)
 
-            if self.predictor == 'cv':
-                cur_pos = self.hist_traj[:,-1,:]
-                for i in range(len(cur_pos)):
-                    LK_path = self.get_LK_path(cur_pos[i])
+        if self.predictor == 'cv':
+            cur_pos = self.hist_traj[np.intersect1d(self.hist_traj[:,0,4], self.target_idx, return_indices=True)[1],-1,:]
+            self.fut_traj = np.zeros(shape=(len(cur_pos), 20, 2))
+            for i in range(len(cur_pos)):
+                LK_path = self.get_LK_path(cur_pos[i])
+                travel_length = np.concatenate((np.linalg.norm(cur_pos[i:i+1,:2] - LK_path[0:1], axis=1), np.linalg.norm(LK_path[1:] - LK_path[:-1], axis=1)), axis=0)
+                for j in range(20):
+                    s = 0.1* (j+1) * cur_pos[i, 2]
+                    for k in range(len(travel_length)):
+                        if np.sum(travel_length[:k+1]) > s:
+                            if k == 0:
+                                interval_start = 0
+                                interval_end = 0
+                            else:
+                                interval_start = k - 1
+                                interval_end = k
+                            break
+                    if interval_start == interval_end:
+                        x = cur_pos[i, 0] + s * (LK_path[0,0] - cur_pos[i, 0]) / travel_length[0]
+                        y = cur_pos[i, 1] + s * (LK_path[0,1] - cur_pos[i, 1]) / travel_length[0]
+                    else:
+                        x = LK_path[interval_start, 0] + (s-np.sum(travel_length[:interval_end])) * (LK_path[interval_end,0] - LK_path[interval_start,0]) / travel_length[interval_end]
+                        y = LK_path[interval_start, 1] + (s-np.sum(travel_length[:interval_end])) * (LK_path[interval_end,1] - LK_path[interval_start,1]) / travel_length[interval_end]
+                    self.fut_traj[i, j, 0] = x
+                    self.fut_traj[i, j, 1] = y
 
+                '''
+                ss = 2 * cur_pos[i, 2]
+                for k in range(len(travel_length)):
+                    if np.sum(travel_length[:k + 1]) > ss:
+                        if k == 0:
+                            interval_start = 0
+                            interval_end = 0
+                        else:
+                            interval_start = k - 1
+                            interval_end = k
+                        break
+                for j in range(20):
+                    s = 0.1 * (j + 1) * cur_pos[i, 2]
+                    if interval_start == interval_end:
+                        x = cur_pos[i, 0] + s * (LK_path[0, 0] - cur_pos[i, 0]) / travel_length[0]
+                        y = cur_pos[i, 1] + s * (LK_path[0, 1] - cur_pos[i, 1]) / travel_length[0]
+                    else:
+                        # x = LK_path[interval_start, 0] + (s-np.sum(travel_length[:interval_end])) * (LK_path[interval_end,0] - LK_path[interval_start,0]) / travel_length[interval_end]
+                        # y = LK_path[interval_start, 1] + (s-np.sum(travel_length[:interval_end])) * (LK_path[interval_end,1] - LK_path[interval_start,1]) / travel_length[interval_end]
+                        x = cur_pos[i, 0] + s * (LK_path[interval_end, 0] - cur_pos[i, 0]) / np.linalg.norm(
+                            LK_path[interval_end] - cur_pos[i, :2])
+                        y = cur_pos[i, 1] + s * (LK_path[interval_end, 1] - cur_pos[i, 1]) / np.linalg.norm(
+                            LK_path[interval_end] - cur_pos[i, :2])
+                    self.fut_traj[i, j, 0] = x
+                    self.fut_traj[i, j, 1] = y
+                '''
+        return self.fut_traj
 
     def get_lc_goal_cands(self, phase):
         if phase == 0:
@@ -208,44 +254,47 @@ class lane_changer:
                     self.sur_data = self.sur_data[1:]
                     self.sur_data.append(data)
 
-        sur_pos_data = np.zeros(shape=(len(data), 2))
-        for i in range(len(sur_pos_data)):
-            sur_pos_data[i, 0] = data[i][2]
-            sur_pos_data[i, 1] = data[i][3]
-        disp = sur_pos_data - self.ego_pos[:2]
-        self.rot = np.asarray([[np.cos(np.deg2rad(-self.ego_pos[2])), -np.sin(np.deg2rad(-self.ego_pos[2]))], [np.sin(np.deg2rad(-self.ego_pos[2])), np.cos(np.deg2rad(-self.ego_pos[2]))]])
-        sur_pos_ego_cord = np.matmul(self.rot, disp.T).T
+                sur_pos_data = np.zeros(shape=(len(data), 2))
+                for i in range(len(sur_pos_data)):
+                    sur_pos_data[i, 0] = data[i][2]
+                    sur_pos_data[i, 1] = data[i][3]
+                disp = sur_pos_data - self.ego_pos[:2]
+                self.rot = np.asarray([[np.cos(np.deg2rad(-self.ego_pos[2])), -np.sin(np.deg2rad(-self.ego_pos[2]))], [np.sin(np.deg2rad(-self.ego_pos[2])), np.cos(np.deg2rad(-self.ego_pos[2]))]])
+                sur_pos_ego_cord = np.matmul(self.rot, disp.T).T
 
-        self.target_idx = np.where((-3.3 * 1.5 < sur_pos_ego_cord[:, 1]) & (sur_pos_ego_cord[:, 1] < -3.3 * 0.5))
-        # 옆차선에 있는 차량 mgeo index기반으로 추출하는 방향으로 수정필요
-        self.target_id = data[self.target_idx[0][0]][0]
+                index = np.where((-3.3 * 1.5 < sur_pos_ego_cord[:, 1]) & (sur_pos_ego_cord[:, 1] < -3.3 * 0.5))[0]
+                self.target_idx = [data[i][0] for i in index]
+                # 옆차선에 있는 차량 mgeo index기반으로 추출하는 방향으로 수정필요
 
-        num_other_veh = 0
-        self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 3))
-        for k in range(len(self.sur_data[-1])):
-            id = self.sur_data[-1][k][0]
-            if self.sur_data[-1][k][1] == -1:
-                row = 0
-            elif id == self.target_id:
-                row = 1
-            else:
-                row = 2 + num_other_veh
-                num_other_veh = num_other_veh + 1
-            for i in range(len(self.sur_data)):
-                index = len(self.sur_data)-1-i
-                veh_idx = [self.sur_data[index][j][0] for j in range(len(self.sur_data[index]))].index(id)
-                x = self.sur_data[index][veh_idx][2]
-                y = self.sur_data[index][veh_idx][3]
-                v = np.sqrt(self.sur_data[index][veh_idx][13]**2 + self.sur_data[index][veh_idx][13]**2)
-                self.hist_traj[row, index, 0] = x
-                self.hist_traj[row, index, 1] = y
-                self.hist_traj[row, index, 2] = v
+                num_other_veh = 0
+                self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 5))
+                for k in range(len(self.sur_data[-1])):
+                    id = self.sur_data[-1][k][0]
+                    if self.sur_data[-1][k][1] == -1:
+                        row = 0
+                    else:
+                        row = 1 + num_other_veh
+                        num_other_veh = num_other_veh + 1
+                    for i in range(len(self.sur_data)):
+                        index = len(self.sur_data)-1-i
+                        veh_idxs = [self.sur_data[index][j][0] for j in range(len(self.sur_data[index]))]
+                        if id in veh_idxs:
+                            veh_idx = veh_idxs.index(id)
+                            x = self.sur_data[index][veh_idx][2]
+                            y = self.sur_data[index][veh_idx][3]
+                            v = np.sqrt(self.sur_data[index][veh_idx][12]**2 + self.sur_data[index][veh_idx][13]**2)
+                            head = self.sur_data[index][veh_idx][5]
+                            self.hist_traj[row, 19-i, 0] = x
+                            self.hist_traj[row, 19-i, 1] = y
+                            self.hist_traj[row, 19-i, 2] = v/3.6
+                            self.hist_traj[row, 19-i, 3] = head
+                            self.hist_traj[row, 19-i, 4] = id
 
-        '''
-        sur_status['x'] = sur_data[0][2]
-        sur_status['y'] = sur_data[0][3]
-        '''
-        return self.target_id
+                '''
+                sur_status['x'] = sur_data[0][2]
+                sur_status['y'] = sur_data[0][3]
+                '''
+        return self.target_idx
 
     def set_ego_info(self, data):
         self.ego_data = data
@@ -259,23 +308,28 @@ class lane_changer:
 
     def get_LK_path(self, pos):
         min_dist = []
-        for i in range(len(LC_manager.mgeos)):
-            points = np.asarray(LC_manager.mgeos[i]['points'])[:, :2]
-            min_dist.append(np.min(np.linalg.norm(points - pos, axis=1)))
+        for i in range(len(self.mgeos)):
+            points = np.asarray(self.mgeos[i]['points'])[:, :2]
+            min_dist.append(np.min(np.linalg.norm(points - pos[:2], axis=1)))
         LK_links = []
 
-        cur_link = LC_manager.mgeos[np.argmin(min_dist)]['idx']
+        cur_link = self.mgeos[np.argmin(min_dist)]['idx']
         LK_links.append(cur_link)
         cur_index = np.argmin(min_dist)
-        cur_link_to_node = LC_manager.mgeos[cur_index]['to_node_idx']
-        front_link_index = [i for i in range(len(LC_manager.mgeos)) if LC_manager.mgeos[i]['from_node_idx'] == cur_link_to_node][0]
-        LK_links.append(LC_manager.mgeos[front_link_index]['idx'])
-        front_front_link_index = [i for i in range(len(LC_manager.mgeos)) if LC_manager.mgeos[i]['from_node_idx'] == LC_manager.mgeos[front_link_index]['to_node_idx']][0]
-        LK_links.append(LC_manager.mgeos[front_front_link_index]['idx'])
+        cur_link_to_node = self.mgeos[cur_index]['to_node_idx']
+        front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == cur_link_to_node][0]
+        LK_links.append(self.mgeos[front_link_index]['idx'])
+        front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[front_link_index]['to_node_idx']][0]
+        LK_links.append(self.mgeos[front_front_link_index]['idx'])
 
-        LK_points = np.asarray(LC_manager.mgeos[cur_index]['points'] +
-                            LC_manager.mgeos[front_link_index]['points'][1:] +
-                            LC_manager.mgeos[front_front_link_index]['points'][1:])[:, :2]
+        LK_points = np.asarray(self.mgeos[cur_index]['points'] +
+                            self.mgeos[front_link_index]['points'][1:] +
+                            self.mgeos[front_front_link_index]['points'][1:])[:, :2]
 
-        nearest_next_pos = np.argmin(np.linalg.norm(LK_points - pos, axis=1))
-        return LK_points
+        nearest_next_pos = np.argmin(np.linalg.norm(LK_points - pos[:2], axis=1))
+        head_to_nearest = np.rad2deg(np.arctan2((LK_points[nearest_next_pos]- pos[:2])[1], (LK_points[nearest_next_pos]- pos[:2])[0]))
+        if np.abs(head_to_nearest - pos[3]) < 90:
+            nearest_index = nearest_next_pos
+        else:
+            nearest_index = nearest_next_pos+1
+        return LK_points[nearest_index:]

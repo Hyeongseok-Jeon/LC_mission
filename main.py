@@ -48,7 +48,7 @@ path_tracker = StanleyController()
 ego_status = dict()
 sur_status = dict()
 
-scenario_load.send_data(['1_LC_mission                  ', False, True, True, True, True, True, False])
+scenario_load.send_data(['1_LC_mission                  ', False, False, True, False, True, True, False])
 # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 state = None
 LC_phase = 3
@@ -94,6 +94,7 @@ while True:
                 # from matplotlib import pyplot as plt
                 # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1], s = 1)
                 # plt.scatter(ego_status['x'], ego_status['y'])
+                prediction = LC_manager.prediction()
                 global_path, global_link_new, LC_phase = LC_manager.get_lc_goal_cands(LC_phase)
                 # plt.plot(np.asarray(LC_manager.global_path)[:,0], np.asarray(LC_manager.global_path)[:,1])
                 # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1])
@@ -133,3 +134,10 @@ while True:
         LC_phase = 0
         LC_cnt = 0
         state = None
+
+from matplotlib import pyplot as plt
+for i in range(len(LC_manager.hist_traj)):
+    plt.plot(LC_manager.hist_traj[i,:,0], LC_manager.hist_traj[i,:,1], 'r')
+
+for i in range(len(LC_manager.fut_traj)):
+    plt.plot(LC_manager.fut_traj[i, :, 0], LC_manager.fut_traj[i, :, 1], 'b')
