@@ -77,12 +77,12 @@ class udp_parser:
                                                                start_byte + offset_byte + 44:start_byte + offset_byte + 56])
                     accel_x, accel_y, accel_z = struct.unpack('fff', raw_data[
                                                                      start_byte + offset_byte + 56:start_byte + offset_byte + 68])
-                    link_id, link_index = self.get_cur_link([pos_x, pos_y])
 
-                    obj_info_list = [obj_id, obj_type, pos_x, pos_y, pos_z, heading, size_x, size_y, size_z, overhang,
-                                     wheelbase, rear_overhang, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, link_id, link_index]
 
-                    if not (obj_info_list[0] == 0):
+                    if not (obj_type == 0):
+                        link_id, link_index = self.get_cur_link([pos_x, pos_y])
+                        obj_info_list = [obj_id, obj_type, pos_x, pos_y, pos_z, heading, size_x, size_y, size_z, overhang,
+                                         wheelbase, rear_overhang, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, link_id, link_index]
                         unpacked_data.append(obj_info_list)
 
                 if len(obj_info_list) != 0:

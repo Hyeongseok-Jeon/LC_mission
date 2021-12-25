@@ -49,7 +49,7 @@ path_tracker = StanleyController()
 ego_status = dict()
 sur_status = dict()
 
-scenario_load.send_data(['2_LC_mission                  ', False, True, True, True, True, True, False])
+scenario_load.send_data(['1_LC_mission                  ', False, True, True, True, True, True, False])
 # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 state = None
 LC_phase = 3
@@ -79,6 +79,7 @@ while True:
         ego_status['link_id'] = ego_data[-2]
         ego_status['link_index'] = ego_data[-1]
         LC_manager.set_ego_info(ego_status)
+        print(time.time()-init_time)
         # 나중에 업데이트되면 삭제하기
         ego_in_sur = [0, -1, ego_data[12],  ego_data[13],  ego_data[14], ego_data[17], ego_data[6], ego_data[7], ego_data[8],
                       ego_data[9], ego_data[10], ego_data[11], ego_data[18], ego_data[19], ego_data[20], ego_data[21], ego_data[22], ego_data[23]]
