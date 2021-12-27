@@ -12,7 +12,7 @@ class lane_changer:
         self.lat_acc_limit = lateral_acc_limit
         self.predictor = predictor
         self.mgeos = mgeos
-        self.target_idx = None
+        self.target_idx = 0
         self.ego_pos = None
         self.ego_link = None
         self.ego_link_index = 159
@@ -22,6 +22,7 @@ class lane_changer:
         self.sur_data = []
         self.sur_data_time = []
         self.fut_traj = np.zeros(shape=(0, 20, 2))
+        self.hist_traj = np.zeros(shape=(1, 20, 5))
 
     def prediction(self):
         if self.predictor == 'none':
@@ -173,7 +174,7 @@ class lane_changer:
                     select target point index based on the prediction result
                     min point index = 60
                     '''
-                    target_point_idx = -1
+                    target_point_idx = 70
 
                 # for i in range(len(points_t_global)):
                 #     for j in range(len(self.accs)):
@@ -213,13 +214,13 @@ class lane_changer:
                 nearest_idx = np.argmin(np.linalg.norm(self.global_path - np.asarray([self.ego_data['x'], self.ego_data['y']]), axis=1))
                 near_pt = self.global_path[nearest_idx+5]
 
-                x0 = near_pt[0]
-                x1 = self.ego_data['vel'] * np.cos(np.deg2rad(self.ego_data['heading']))
+                x0 = self.ego_data['x']
+                x1 = 1.3*self.ego_data['vel'] * np.cos(np.deg2rad(self.ego_data['heading']))
                 x2 = (3 * (points_t_global[target_point_idx, 0] - x0 - x1 * self.t_lc[t_lc_idx]) - self.t_lc[t_lc_idx] * (vx_f - x1)) / (self.t_lc[t_lc_idx] ** 2)
                 x3 = (points_t_global[target_point_idx, 0] - x0 - x1 * self.t_lc[t_lc_idx] - x2 * self.t_lc[t_lc_idx] ** 2) / (self.t_lc[t_lc_idx] ** 3)
 
-                y0 = near_pt[1]
-                y1 = self.ego_data['vel'] * np.sin(np.deg2rad(self.ego_data['heading']))
+                y0 = self.ego_data['y']
+                y1 = 1.3*self.ego_data['vel'] * np.sin(np.deg2rad(self.ego_data['heading']))
                 y2 = (3 * (points_t_global[target_point_idx, 1] - y0 - y1 * self.t_lc[t_lc_idx]) - self.t_lc[t_lc_idx] * (vy_f - y1)) / (self.t_lc[t_lc_idx] ** 2)
                 y3 = (points_t_global[target_point_idx, 1] - y0 - y1 * self.t_lc[t_lc_idx] - y2 * self.t_lc[t_lc_idx] ** 2) / (self.t_lc[t_lc_idx] ** 3)
 

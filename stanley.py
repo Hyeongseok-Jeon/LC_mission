@@ -1,8 +1,10 @@
 import numpy as np
 from math import cos,sin, radians
 import numpy.matlib as npm
+import threading
+
 class StanleyController:
-    def __init__(self, k=0.5, wheelbase=2.8, polynomial_order=3):
+    def __init__(self, k=0.2, wheelbase=2.7, polynomial_order=3):
         # control agin
         self.k = k
         self.wheelbase = wheelbase
@@ -12,7 +14,8 @@ class StanleyController:
         self.vehicle_angle = 0.0
         self.vehicle_velocity = 0.0
 
-        self.path = np.matrix([[0.0], [0.0]])
+        self.path = np.array([[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]])
+
 
     def set_ego_status(self, status_msg):
         '''
@@ -44,7 +47,7 @@ class StanleyController:
         path_coefficients = np.polyfit(
             np.squeeze(np.array(rotated_local_path[0, :])),
             np.squeeze(np.array(rotated_local_path[1, :])),
-            self.polynomial_order,
+            self.polynomial_order
         )
         path_coefficients_derivative = np.polyder(path_coefficients)
 
@@ -53,4 +56,8 @@ class StanleyController:
         theta_heading = np.arctan(np.polyval(path_coefficients_derivative, 0))
 
         theta = theta_distance + theta_heading
-        return theta, lateral_offset
+        self.theta = theta
+        self.lateral_offset = lateral_offset
+
+    def get_output(self):
+        return self.theta, self.lateral_offset

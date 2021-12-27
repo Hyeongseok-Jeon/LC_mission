@@ -19,8 +19,10 @@ class udp_parser:
 
     def recv_udp_data(self):
         while True:
+            init = time.time()
             raw_data, sender = self.sock.recvfrom(self.data_size)
             self.data_parsing(raw_data)
+            # print(time.time() - init)
 
     def data_parsing(self, raw_data):
 
@@ -63,27 +65,22 @@ class udp_parser:
 
                 for i in range(20):
                     start_byte = i * 68
-                    obj_id, obj_type = struct.unpack('hh',
-                                                     raw_data[start_byte + offset_byte:start_byte + offset_byte + 4])
-                    pos_x, pos_y, pos_z = struct.unpack('fff', raw_data[
-                                                               start_byte + offset_byte + 4:start_byte + offset_byte + 16])
-                    heading = struct.unpack('f', raw_data[start_byte + offset_byte + 16:start_byte + offset_byte + 20])[
-                        0]
-                    size_x, size_y, size_z = struct.unpack('fff', raw_data[
-                                                                  start_byte + offset_byte + 20:start_byte + offset_byte + 32])
-                    overhang, wheelbase, rear_overhang = struct.unpack('fff', raw_data[
-                                                                              start_byte + offset_byte + 32:start_byte + offset_byte + 44])
-                    vel_x, vel_y, vel_z = struct.unpack('fff', raw_data[
-                                                               start_byte + offset_byte + 44:start_byte + offset_byte + 56])
-                    accel_x, accel_y, accel_z = struct.unpack('fff', raw_data[
-                                                                     start_byte + offset_byte + 56:start_byte + offset_byte + 68])
+                    obj_id, obj_type = struct.unpack('hh', raw_data[start_byte + offset_byte:start_byte + offset_byte + 4])
+                    pos_x, pos_y, pos_z = struct.unpack('fff', raw_data[start_byte + offset_byte + 4:start_byte + offset_byte + 16])
+                    heading = struct.unpack('f', raw_data[start_byte + offset_byte + 16:start_byte + offset_byte + 20])[0]
+                    size_x, size_y, size_z = struct.unpack('fff', raw_data[start_byte + offset_byte + 20:start_byte + offset_byte + 32])
+                    overhang, wheelbase, rear_overhang = struct.unpack('fff', raw_data[start_byte + offset_byte + 32:start_byte + offset_byte + 44])
+                    vel_x, vel_y, vel_z = struct.unpack('fff', raw_data[start_byte + offset_byte + 44:start_byte + offset_byte + 56])
+                    accel_x, accel_y, accel_z = struct.unpack('fff', raw_data[start_byte + offset_byte + 56:start_byte + offset_byte + 68])
 
+                    obj_info_list = [obj_id, obj_type, pos_x, pos_y, pos_z, heading, size_x, size_y, size_z, overhang,
+                                     wheelbase, rear_overhang, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z]
 
-                    if not (obj_type == 0):
-                        link_id, link_index = self.get_cur_link([pos_x, pos_y])
-                        obj_info_list = [obj_id, obj_type, pos_x, pos_y, pos_z, heading, size_x, size_y, size_z, overhang,
-                                         wheelbase, rear_overhang, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, link_id, link_index]
+                    if not (obj_info_list[0] == 0):
                         unpacked_data.append(obj_info_list)
+
+                    else:
+                        break
 
                 if len(obj_info_list) != 0:
                     self.parsed_data = unpacked_data
