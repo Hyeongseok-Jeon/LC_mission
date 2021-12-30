@@ -23,7 +23,7 @@ def findLocalPath(ref_path,position_x,position_y):
     else :
         last_local_waypoint=current_waypoint+end_index
 
-    for i in range(current_waypoint,last_local_waypoint) :
+    for i in range(current_waypoint-10,last_local_waypoint) :
         tmp_pose=[]
         tmp_pose.append(ref_path[i][0])
         tmp_pose.append(ref_path[i][1])

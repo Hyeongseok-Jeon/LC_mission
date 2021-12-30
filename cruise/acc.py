@@ -37,7 +37,7 @@ def control(speed=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
         """
 
         if state is None:
-            state = dict(K_p=0.5, K_d=0.5, K_i=0.00003, d_front_prev=100,
+            state = dict(K_p=0.4, K_d=0.9, K_i=0.00001, d_front_prev=100,
                          t_safe=.5, prev_setpoint=0., integral_setpoint=0.,
                          maintaining_distance=False)
 

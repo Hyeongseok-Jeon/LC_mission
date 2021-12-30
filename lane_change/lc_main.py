@@ -22,7 +22,11 @@ class lane_changer:
         self.sur_data = []
         self.sur_data_time = []
         self.fut_traj = np.zeros(shape=(0, 20, 2))
-        self.hist_traj = np.zeros(shape=(1, 20, 5))
+        self.hist_traj = np.zeros(shape=(0, 20, 6))
+
+        self.mgeo_links = [self.mgeos[i]['idx'][1:-1] if '{' in self.mgeos[i]['idx'] else self.mgeos[i]['idx'] for i in range(len(self.mgeos))]
+        self.to_nodes = [self.mgeos[i]['to_node_idx'] for i in range(len(self.mgeos))]
+        self.from_nodes = [self.mgeos[i]['from_node_idx'] for i in range(len(self.mgeos))]
 
     def prediction(self):
         if self.predictor == 'none':
@@ -268,7 +272,7 @@ class lane_changer:
                 # 옆차선에 있는 차량 mgeo index기반으로 추출하는 방향으로 수정필요
 
                 num_other_veh = 0
-                self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 5))
+                self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 6))
                 for k in range(len(self.sur_data[-1])):
                     id = self.sur_data[-1][k][0]
                     if self.sur_data[-1][k][1] == -1:
@@ -285,11 +289,14 @@ class lane_changer:
                             y = self.sur_data[index][veh_idx][3]
                             v = np.sqrt(self.sur_data[index][veh_idx][12]**2 + self.sur_data[index][veh_idx][13]**2)
                             head = self.sur_data[index][veh_idx][5]
+                            link = self.sur_data[index][veh_idx][-1]
+                            link_index = self.mgeo_links.index(link)
                             self.hist_traj[row, 19-i, 0] = x
                             self.hist_traj[row, 19-i, 1] = y
                             self.hist_traj[row, 19-i, 2] = v/3.6
                             self.hist_traj[row, 19-i, 3] = head
                             self.hist_traj[row, 19-i, 4] = id
+                            self.hist_traj[row, 19-i, 5] = link_index
 
                 '''
                 sur_status['x'] = sur_data[0][2]
@@ -300,27 +307,29 @@ class lane_changer:
     def set_ego_info(self, data):
         self.ego_data = data
         self.ego_pos = np.asarray([data['x'], data['y'], data['heading']])
-        self.ego_link = self.mgeos[data['link_index']]['idx']
-        self.ego_link_index = data['link_index']
+        self.ego_link = data['link_id']
+        for i in range(len(self.mgeos)):
+            if self.mgeos[i]['idx'][1:-1] == data['link_id']:
+                self.ego_link_index = i
+                break
+        return self.ego_link_index
 
     def get_global_path(self):
         return self.global_path
 
 
     def get_LK_path(self, pos):
-        min_dist = []
-        for i in range(len(self.mgeos)):
-            points = np.asarray(self.mgeos[i]['points'])[:, :2]
-            min_dist.append(np.min(np.linalg.norm(points - pos[:2], axis=1)))
         LK_links = []
-
-        cur_link = self.mgeos[np.argmin(min_dist)]['idx']
+        cur_link = self.mgeos[int(pos[5])]['idx']
         LK_links.append(cur_link)
-        cur_index = np.argmin(min_dist)
+
+        cur_index = int(pos[5])
         cur_link_to_node = self.mgeos[cur_index]['to_node_idx']
-        front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == cur_link_to_node][0]
+        front_link_index = self.from_nodes.index(cur_link_to_node)
         LK_links.append(self.mgeos[front_link_index]['idx'])
-        front_front_link_index = [i for i in range(len(self.mgeos)) if self.mgeos[i]['from_node_idx'] == self.mgeos[front_link_index]['to_node_idx']][0]
+
+        front_link_to_node = self.mgeos[front_link_index]['to_node_idx']
+        front_front_link_index = self.from_nodes.index(front_link_to_node)
         LK_links.append(self.mgeos[front_front_link_index]['idx'])
 
         LK_points = np.asarray(self.mgeos[cur_index]['points'] +
