@@ -49,7 +49,7 @@ path_tracker = StanleyController()
 ego_status = dict()
 sur_status = dict()
 scenario = '1_LC_mission                  '
-scenario_load.send_data([scenario, False, True, True, True, True, True, False])
+scenario_load.send_data([scenario, False, False, True, True, True, True, False])
 # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 state = None
 LC_phase = 3
@@ -122,7 +122,6 @@ while True:
         ego_status['link_index'] = LC_manager.set_ego_info(ego_status)
         target_idx = LC_manager.set_veh_info_ego_cordinate(sur_data)
         prediction = LC_manager.prediction()
-        print(prediction.shape)
 
         '''
         calculate lane change path
@@ -204,7 +203,7 @@ while True:
             accel_pedal = gas
         brake_pedal = brake
 
-        # ego_ctrl.send_data([ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
+        ego_ctrl.send_data([ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
         print(time.time()-init_time)
 
         # print(['2', time.time() - init_time])
