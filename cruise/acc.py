@@ -24,7 +24,7 @@ def get_target(link_list, sur_data, ego_data, mgeos):
         pt = np.asarray(sur_pos)[np.argmin(np.linalg.norm(np.asarray(sur_pos) - np.asarray([ego_data[12], ego_data[13]]), axis=1))]
     return pt
 
-def control(speed=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
+def control(speed=0, car_in_front=200, gap=2, cruise_speed=None, state=None):
         """Adaptive Cruise Control
            speed: Current car speed (m/s)
            acceleration: Current car acceleration (m/s^2)
@@ -37,11 +37,11 @@ def control(speed=0, car_in_front=200, gap=5, cruise_speed=None, state=None):
         """
 
         if state is None:
-            state = dict(K_p=0.4, K_d=0.9, K_i=0.00001, d_front_prev=100,
+            state = dict(K_p=0.4, K_d=0.9, K_i=0.0000, d_front_prev=100,
                          t_safe=.5, prev_setpoint=0., integral_setpoint=0.,
                          maintaining_distance=False)
 
-        delta_distance = car_in_front - 2 * gap - speed**2 / (2 * 2.11)
+        delta_distance = car_in_front - gap - speed
 
         # if the car ahead does not allow to get to cruise speed
         # use safe following distance as a measure until cruise speed is reached again

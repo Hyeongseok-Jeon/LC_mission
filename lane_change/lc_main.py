@@ -23,7 +23,8 @@ class lane_changer:
         self.sur_data_time = []
         self.fut_traj = np.zeros(shape=(0, 20, 2))
         self.hist_traj = np.zeros(shape=(0, 20, 6))
-
+        self.front_target = []
+        self.right_vehs = []
         self.mgeo_links = [self.mgeos[i]['idx'][1:-1] if '{' in self.mgeos[i]['idx'] else self.mgeos[i]['idx'] for i in range(len(self.mgeos))]
         self.to_nodes = [self.mgeos[i]['to_node_idx'] for i in range(len(self.mgeos))]
         self.from_nodes = [self.mgeos[i]['from_node_idx'] for i in range(len(self.mgeos))]
@@ -37,7 +38,7 @@ class lane_changer:
             cur_pos = self.hist_traj[np.intersect1d(self.hist_traj[:,0,4], self.target_idx, return_indices=True)[1],-1,:]
             self.fut_traj = np.zeros(shape=(len(cur_pos), 20, 2))
             for i in range(len(cur_pos)):
-                LK_path = self.get_LK_path(cur_pos[i])
+                LK_path, _ = self.get_LK_path(cur_pos[i])
                 travel_length = np.concatenate((np.linalg.norm(cur_pos[i:i+1,:2] - LK_path[0:1], axis=1), np.linalg.norm(LK_path[1:] - LK_path[:-1], axis=1)), axis=0)
                 for j in range(20):
                     s = 0.1* (j+1) * cur_pos[i, 2]
@@ -243,13 +244,19 @@ class lane_changer:
             self.global_link = new_global_link
             return new_global_path, new_global_link, 1
 
-    def set_veh_info_ego_cordinate(self, data):
+    def set_veh_info_ego_cordinate(self, data, LC_cnt):
         if len(self.sur_data) == 0:
             self.sur_data.append(data)
             self.sur_data_time.append(time.time())
+            log_index = 0
         else:
             cur_time = time.time()
+            log_index = 0
             if cur_time - self.sur_data_time[-1] > 0.099:
+                log_index = 1
+                self.right_vehs = []
+                self.front_target = []
+                self.right_links = []
                 if len(self.sur_data) < 20:
                     self.sur_data.append(data)
                     self.sur_data_time.append(time.time())
@@ -259,19 +266,14 @@ class lane_changer:
                     self.sur_data = self.sur_data[1:]
                     self.sur_data.append(data)
 
-                sur_pos_data = np.zeros(shape=(len(data), 2))
-                for i in range(len(sur_pos_data)):
-                    sur_pos_data[i, 0] = data[i][2]
-                    sur_pos_data[i, 1] = data[i][3]
-                disp = sur_pos_data - self.ego_pos[:2]
-                self.rot = np.asarray([[np.cos(np.deg2rad(-self.ego_pos[2])), -np.sin(np.deg2rad(-self.ego_pos[2]))], [np.sin(np.deg2rad(-self.ego_pos[2])), np.cos(np.deg2rad(-self.ego_pos[2]))]])
-                sur_pos_ego_cord = np.matmul(self.rot, disp.T).T
-
-                index = np.where((-3.3 * 1.5 < sur_pos_ego_cord[:, 1]) & (sur_pos_ego_cord[:, 1] < -3.3 * 0.5))[0]
-                self.target_idx = [data[i][0] for i in index]
-                # 옆차선에 있는 차량 mgeo index기반으로 추출하는 방향으로 수정필요
-
                 num_other_veh = 0
+                while True:
+                    invalid_veh_num = [self.sur_data[-1][i][-1] for i in range(len(self.sur_data[-1]))].count('not_detected')
+                    if invalid_veh_num > 0:
+                        not_detected_index = [self.sur_data[-1][i][-1] for i in range(len(self.sur_data[-1]))].index('not_detected')
+                        self.sur_data[-1].pop(not_detected_index)
+                    else:
+                        break
                 self.hist_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 6))
                 for k in range(len(self.sur_data[-1])):
                     id = self.sur_data[-1][k][0]
@@ -297,12 +299,58 @@ class lane_changer:
                             self.hist_traj[row, 19-i, 3] = head
                             self.hist_traj[row, 19-i, 4] = id
                             self.hist_traj[row, 19-i, 5] = link_index
+                sur_pos_data = np.zeros(shape=(len(data), 2))
+                for i in range(len(sur_pos_data)):
+                    sur_pos_data[i, 0] = data[i][2]
+                    sur_pos_data[i, 1] = data[i][3]
+                disp = sur_pos_data - self.ego_pos[:2]
+                self.rot = np.asarray(
+                    [[np.cos(np.deg2rad(-self.ego_pos[2])), -np.sin(np.deg2rad(-self.ego_pos[2]))],
+                     [np.sin(np.deg2rad(-self.ego_pos[2])), np.cos(np.deg2rad(-self.ego_pos[2]))]])
+                sur_pos_ego_cord = np.matmul(self.rot, disp.T).T
 
-                '''
-                sur_status['x'] = sur_data[0][2]
-                sur_status['y'] = sur_data[0][3]
-                '''
-        return self.target_idx
+                LK_pts, LK_links = self.get_LK_path(self.hist_traj[0, -1, :])
+                if LC_cnt > 0 and LC_cnt <4:
+                    # get front vehicle
+                    # get right vehicle
+                    right_link = self.mgeos[int(self.hist_traj[0, -1,-1])]['right_lane_change_dst_link_idx']
+                    if 'LN' in right_link:
+                        right_link_index = self.mgeo_links.index(right_link)
+                    else:
+                        right_link_index = self.mgeo_links.index(right_link[1:-1])
+                    right_link_points = np.asarray(self.mgeos[right_link_index]['points'])[:,:2]
+                    nearest_right_point = right_link_points[np.argmin(np.linalg.norm(right_link_points - self.hist_traj[0, -1,:2],axis=1))]
+                    right_pts, self.right_links = self.get_LK_path(np.asarray([nearest_right_point[0],
+                                                                          nearest_right_point[1],
+                                                                          self.hist_traj[0, -1, 3],
+                                                                          0,
+                                                                          0,
+                                                                          right_link_index]))
+
+                rf_cnt = 0
+                rr_cnt = 0
+                f_cnt = 0
+                for i in range(len(sur_pos_data)):
+                    link = data[i][-1]
+                    if '{'+link+'}' in LK_links:
+                        if sur_pos_ego_cord[i,0]>0 and f_cnt < 1:
+                            f_cnt = f_cnt +1
+                            self.front_target.append(data[i])
+                    elif '{'+link+'}' in self.right_links:
+                        if sur_pos_ego_cord[i,0]>0 and rf_cnt < 2:
+                            rf_cnt = rf_cnt + 1
+                            self.right_vehs.append(data[i])
+                        elif rr_cnt < 2:
+                            rr_cnt = rr_cnt + 1
+                            self.right_vehs.append(data[i])
+                self.target_idx = [self.right_vehs[i][0] for i in range(len(self.right_vehs))]
+                if len(self.front_target) > 0:
+                    self.target_idx.append(self.front_target[0][0])
+                    '''
+                    sur_status['x'] = sur_data[0][2]
+                    sur_status['y'] = sur_data[0][3]
+                    '''
+        return self.front_target, self.right_vehs, log_index
 
     def set_ego_info(self, data):
         self.ego_data = data
@@ -342,4 +390,4 @@ class lane_changer:
             nearest_index = nearest_next_pos
         else:
             nearest_index = nearest_next_pos+1
-        return LK_points[nearest_index:]
+        return LK_points[nearest_index:], LK_links

@@ -45,7 +45,9 @@ class udp_parser:
                 steer = struct.unpack('f', raw_data[117:121])[0]
                 link_id = raw_data[121:159].decode()
                 if '\x00' in link_id:
-                    link_id = '{' + link_id[:9]
+                    link_id = '{' + link_id[:8]
+                    if '\x00' in link_id:
+                        link_id = '{not_detected}'
                 data_1 = ctrl_mode, gear, signed_vel, map_id, accel, brake, size_x, size_y, size_z, overhang, wheelbase, rear_overhang
                 data_2 = pose_x, pose_y, pose_z, roll, pitch, yaw, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, steer, link_id[1:-1]
                 unpacked_data = data_1 + data_2
@@ -73,6 +75,8 @@ class udp_parser:
                     cur_link = raw_data[start_byte+offset_byte+68:start_byte+offset_byte+106].decode()
                     if '\x00' in cur_link:
                         cur_link = '{' + cur_link[:9]
+                        if '\x00' in cur_link:
+                            cur_link = '{not_detected}'
                     obj_info_list = [obj_id, obj_type, pos_x, pos_y, pos_z, heading, size_x, size_y, size_z, overhang,
                                      wheelbase, rear_overhang, vel_x, vel_y, vel_z, accel_x, accel_y, accel_z, cur_link[1:-1]]
 

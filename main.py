@@ -1,15 +1,25 @@
-import sys
 import numpy as np
 from UDP.UDP_parser import udp_parser, udp_sender
-from math import cos, sin, sqrt, pow, atan2, pi
 import time
-import threading
 import os, json
 from stanley import StanleyController
 from paths.utils import pathReader, findLocalPath
 from cruise.acc import control as acc
-from cruise.acc import get_target
 from lane_change.lc_main import lane_changer
+import csv
+import glob
+
+def ego_parking(ego_ctrl):
+    ctrl_mode = 2  # 2 = AutoMode / 1 = KeyBoard
+    Gear = 1  # 4 1 : (P / parking ) 2 (R / reverse) 3 (N / Neutral)  4 : (D / Drive) 5 : (L)
+    cmd_type = 1  # 1 : Throttle  /  2 : Velocity  /  3 : Acceleration
+    send_velocity = 0  # cmd_type이 2일때 원하는 속도를 넣어준다.
+    acceleration = 0  # cmd_type이 3일때 원하는 가속도를 넣어준다.
+    accel_pedal = 0
+    brake_pedal = 0
+    steering_angle = 0
+    ego_ctrl.send_data(
+        [ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
 
 # path = os.path.dirname(os.path.abspath( __file__ ))
 path = os.getcwd()
@@ -48,22 +58,40 @@ LC_manager = lane_changer(mgeos, global_path, global_link, predictor='cv')
 path_tracker = StanleyController()
 ego_status = dict()
 sur_status = dict()
-scenario = '1_LC_mission                  '
-scenario_load.send_data([scenario, False, False, True, True, True, True, False])
-# scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 state = None
 LC_phase = 3
 LC_cnt = 0
 
-start_point = np.asarray([[-90.04747009277344, 280.0341796875]])
 end_point = np.asarray([[121.24830627441406,364.656494140625],
                         [122.84101867675781, 361.5880126953125],
                         [125.08885192871094, 358.66607666015625],
                         [127.35853576660156, 355.77191162109375],
                         [130.8572235107422, 343.28472900390625]])
+end_link = ['78d4b4eb-adc3-4a13-850a-81bac33f1f4c',
+            '64bb3a4a-dc5e-4c45-aa23-22551b35f911',
+            '86e802aa-c452-49e1-9b9a-861dafae8bec',
+            'aea39602-620b-481c-abd1-78ca785b5c86']
 pos_save = 0
 scene_regen = 0
 
+time.sleep(2)
+scenario = '3_LC_mission                  '
+while True:
+    scenario_load.send_data([scenario, False, True, True, True, True, True, False])
+    ego_data = ego.get_data()
+    if ego_data[-1] == 'ea2b8531-6438-4899-adf6-2f0e314c2203':
+        start_point = np.asarray([[ego_data[12], ego_data[13]]])
+        break
+time.sleep(2)
+while True:
+    ego_parking(ego_ctrl)
+    ego_data = ego.get_data()
+    if ego_data[1] == 1:
+        break
+
+# scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
+data_log = []
+data_time = []
 
 
 while True:
@@ -80,6 +108,8 @@ while True:
     ego_status['acc_x'] = ego_data[21]
     ego_status['acc_y'] = ego_data[22]
     ego_status['link_id'] = ego_data[-1]
+    if ego_status['link_id'] in end_link:
+        LC_cnt = 5
     ego_pos = np.asarray([ego_status['x'], ego_status['y']])
     # print(ego_status['vel'] * 3.6)
     # print(ego_status['x'], ego_status['y'])
@@ -88,20 +118,6 @@ while True:
         scene_regen = 1
     elif np.min(np.linalg.norm(start_point - ego_pos, axis= 1)) < 3:
         scene_regen = 0
-    #
-    # if pos_save == 0:
-    #     prev_pos = ego_pos
-    # pos_save = pos_save + 1
-    # if pos_save == 1000:
-    #     pos_save = 0
-    #
-    # if scene_regen == 0:
-    #     if np.linalg.norm(ego_pos - prev_pos) < 0.0001:
-    #         scene_regen = 1
-    #     else:
-    #         scene_regen = 0
-    # print(pos_save)
-    # print(scene_regen)
 
     if scene_regen == 0:
         '''
@@ -120,7 +136,12 @@ while True:
         get prediction
         '''
         ego_status['link_index'] = LC_manager.set_ego_info(ego_status)
-        target_idx = LC_manager.set_veh_info_ego_cordinate(sur_data)
+        front_target, right_target, log_index = LC_manager.set_veh_info_ego_cordinate(sur_data, LC_cnt)
+        if log_index == 1:
+            data_log.append(sur_data)
+            data_time.append(time.time())
+
+        # print(len(front_target))
         prediction = LC_manager.prediction()
 
         '''
@@ -168,12 +189,12 @@ while True:
             point = np.asarray([111.09992980957031, 337.95147705078125])
             if np.linalg.norm(point - ego_pos) < 50:
                 a = ((40/3.6)**2 - (ego_status['vel'])**2)/(2*np.linalg.norm(point - ego_pos))
-                target_velocity = ego_status['vel'] + a
+                target_velocity = ego_status['vel'] + 0.5*a
                 if target_velocity < 40/3.6:
                     target_velocity = 40/3.6
         else:
             target_velocity = 60/3.6
-        # print(target_velocity*3.6)
+
         '''
         lateral controller
         '''
@@ -186,9 +207,12 @@ while True:
         '''
         longitudinal controller
         '''
-        brake, gas, control, state = acc(ego_status['vel'], car_in_front=200, cruise_speed=target_velocity, state=state)
-
-
+        if len(front_target)>0:
+            dist_to_front = np.linalg.norm(front_target[0][2:4] - ego_pos)
+            state['integral_setpoint'] = 0
+        else:
+            dist_to_front = 500
+        brake, gas, control, state = acc(ego_status['vel'], car_in_front=dist_to_front, cruise_speed=target_velocity, state=state)
         '''
         control command
         '''
@@ -204,7 +228,7 @@ while True:
         brake_pedal = brake
 
         ego_ctrl.send_data([ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
-        print(time.time()-init_time)
+        # print(time.time()-init_time)
 
         # print(['2', time.time() - init_time])
 
@@ -222,17 +246,62 @@ while True:
         # dist_to_target = np.sqrt((sur_status['x'] - ego_status['x']) ** 2 + (sur_status['y'] - ego_status['y']) ** 2)
         # print(ego_status['vel']*3.6)
     else:
+        if len(data_log) > 0:
+            a = glob.glob('scenarios/episodes/*.csv')
+            idx = len(a) + 1
+            f = open("scenarios/episodes/" + str(idx) +".csv", "w")
+            writer = csv.writer(f)
+            writer.writerow(['TIMESTAMP','TRACK_ID','OBJECT_TYPE','X','Y','Heading','Velocity','CITY_NAME'])
+            for i in range(len(data_time)):
+                for j in range(len(data_log[i])):
+                    if data_log[i][j][1] == -1:
+                        data_cat = 'AV'
+                    elif data_log[i][j][1] == 1:
+                        data_cat = 'OTHERS'
+                    else:
+                        data_cat = 'Not_Defined'
+                    vel = np.sqrt(data_log[i][j][12]**2 + data_log[i][j][13]**2)
+                    id = data_log[i][j][0]
+                    if len(str(id)) == 1:
+                        id = '00000000-0000-0000-0000-00000000000' + str(id)
+                    elif len(str(id)) == 2:
+                        id = '00000000-0000-0000-0000-0000000000' + str(id)
+                    elif len(str(id)) == 3:
+                        id = '00000000-0000-0000-0000-000000000' + str(id)
+
+                    data = [data_time[i],id,data_cat,data_log[i][j][2],data_log[i][j][3],data_log[i][j][5],vel/3.6,'JEJU_AIRPORT']
+                    writer.writerow(data)
+            f.close()
+
+
         # time.sleep(0.02)
         # print(time.time()-init_time)
+        global_path, global_link, mgeos = path_reader.read('jeju_airport.json')
+        LC_manager = lane_changer(mgeos, global_path, global_link, predictor='cv')
 
         path_tracker = StanleyController()
         ego_status = dict()
         sur_status = dict()
-        scenario_load.send_data([scenario, False, True, True, True, True, True, False])
-        # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
+
+        while True:
+            scenario_load.send_data([scenario, False, True, True, True, True, True, False])
+            ego_data = ego.get_data()
+            if ego_data[-1] == 'ea2b8531-6438-4899-adf6-2f0e314c2203':
+                start_point = np.asarray([[ego_data[12], ego_data[13]]])
+                break
+
+        while True:
+            ego_parking(ego_ctrl)
+            ego_data = ego.get_data()
+            if ego_data[1] == 1:
+                break
         state = None
         LC_phase = 3
         LC_cnt = 0
+        data_log = []
+        data_time = []
+        time.sleep(20)
+        print('scenario_gen')
 
 #
 # from matplotlib import pyplot as plt
