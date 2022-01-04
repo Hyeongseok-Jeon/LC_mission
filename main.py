@@ -137,6 +137,8 @@ while True:
         '''
         ego_status['link_index'] = LC_manager.set_ego_info(ego_status)
         front_target, right_target, log_index = LC_manager.set_veh_info_ego_cordinate(sur_data, LC_cnt)
+        print(LC_manager.target_idx)
+
         if log_index == 1:
             data_log.append(sur_data)
             data_time.append(time.time())

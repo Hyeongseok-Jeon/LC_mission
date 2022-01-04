@@ -30,13 +30,14 @@ class lane_changer:
         self.from_nodes = [self.mgeos[i]['from_node_idx'] for i in range(len(self.mgeos))]
 
     def prediction(self):
+        cur_pos = self.hist_traj[np.intersect1d(self.hist_traj[:, 0, 4], self.target_idx, return_indices=True)[1], -1, :]
+        self.fut_traj = np.zeros(shape=(len(cur_pos), 20, 2))
         if self.predictor == 'none':
-            self.fut_traj = np.zeros(shape=(len(self.sur_data[-1]), 20, 2))
-            self.fut_traj = np.repeat(self.hist_traj[:, -1:, :], 20, axis = 1)
+            for i in range(len(cur_pos)):
+                self.fut_traj[i, :, 0] = cur_pos[i, 0]
+                self.fut_traj[i, :, 1] = cur_pos[i, 1]
 
         if self.predictor == 'cv':
-            cur_pos = self.hist_traj[np.intersect1d(self.hist_traj[:,0,4], self.target_idx, return_indices=True)[1],-1,:]
-            self.fut_traj = np.zeros(shape=(len(cur_pos), 20, 2))
             for i in range(len(cur_pos)):
                 LK_path, _ = self.get_LK_path(cur_pos[i])
                 travel_length = np.concatenate((np.linalg.norm(cur_pos[i:i+1,:2] - LK_path[0:1], axis=1), np.linalg.norm(LK_path[1:] - LK_path[:-1], axis=1)), axis=0)
@@ -179,7 +180,10 @@ class lane_changer:
                     select target point index based on the prediction result
                     min point index = 60
                     '''
-                    target_point_idx = 70
+                    if points_t_global.shape[0] > 140:
+                        target_point_idx = 70
+                    else:
+                        target_point_idx = int(np.ceil(points_t_global.shape[0] / 2))
 
                 acc_idx = 1
                 t_lc_idx = 2
