@@ -181,26 +181,6 @@ class lane_changer:
                     '''
                     target_point_idx = 70
 
-                # for i in range(len(points_t_global)):
-                #     for j in range(len(self.accs)):
-                #         if i == 0:
-                #             head_f = np.arctan2(points_t_global[i + 1, 1] - points_t_global[i, 1], points_t_global[i + 1, 0] - points_t_global[i, 0])
-                #             v_f = self.ego_data['vel'] + 2 * self.accs[j]
-                #         else:
-                #             head_f = np.arctan2(points_t_global[i, 1] - points_t_global[i - 1, 1], points_t_global[i, 0] - points_t_global[i - 1, 0])
-                #             v_f = self.ego_data['vel'] + 2 * self.accs[j]
-                #         vx_f = v_f * np.cos(head_f)
-                #         vy_f = v_f * np.sin(head_f)
-                #
-                #         x0 = self.ego_data['x']
-                #         x1 = self.ego_data['vel_x']
-                #         x3 = (vx_f - points_t_global[i,0] + x0 + x1)/4
-                #         x2 = (vx_f - x1 -12*x3)/4
-                #
-                #         y0 = self.ego_data['y']
-                #         y1 = self.ego_data['vel_y']
-                #         y3 = (vy_f - points_t_global[i,1] + y0 + y1)/4
-                #         y2 = (vy_f - y1 -12*y3)/4
                 acc_idx = 1
                 t_lc_idx = 2
                 if target_point_idx == 0:
@@ -329,12 +309,12 @@ class lane_changer:
 
                 rf_cnt = 0
                 rr_cnt = 0
-                f_cnt = 0
+                fr_cnt = 0
                 for i in range(len(sur_pos_data)):
                     link = data[i][-1]
-                    if '{'+link+'}' in LK_links:
-                        if sur_pos_ego_cord[i,0]>0 and f_cnt < 1:
-                            f_cnt = f_cnt +1
+                    if '{'+link+'}' in self.global_link + LK_links:
+                        if sur_pos_ego_cord[i,0]>0 and fr_cnt < 1:
+                            fr_cnt = fr_cnt +1
                             self.front_target.append(data[i])
                     elif '{'+link+'}' in self.right_links:
                         if sur_pos_ego_cord[i,0]>0 and rf_cnt < 2:
