@@ -276,13 +276,16 @@ class lane_changer:
                             v = np.sqrt(self.sur_data[index][veh_idx][12]**2 + self.sur_data[index][veh_idx][13]**2)
                             head = self.sur_data[index][veh_idx][5]
                             link = self.sur_data[index][veh_idx][-1]
-                            link_index = self.mgeo_links.index(link)
-                            self.hist_traj[row, 19-i, 0] = x
-                            self.hist_traj[row, 19-i, 1] = y
-                            self.hist_traj[row, 19-i, 2] = v/3.6
-                            self.hist_traj[row, 19-i, 3] = head
-                            self.hist_traj[row, 19-i, 4] = id
-                            self.hist_traj[row, 19-i, 5] = link_index
+                            if link == 'not_detected':
+                                pass
+                            else:
+                                link_index = self.mgeo_links.index(link)
+                                self.hist_traj[row, 19-i, 0] = x
+                                self.hist_traj[row, 19-i, 1] = y
+                                self.hist_traj[row, 19-i, 2] = v/3.6
+                                self.hist_traj[row, 19-i, 3] = head
+                                self.hist_traj[row, 19-i, 4] = id
+                                self.hist_traj[row, 19-i, 5] = link_index
                 sur_pos_data = np.zeros(shape=(len(data), 2))
                 for i in range(len(sur_pos_data)):
                     sur_pos_data[i, 0] = data[i][2]

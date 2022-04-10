@@ -75,7 +75,7 @@ pos_save = 0
 scene_regen = 0
 
 time.sleep(2)
-scenario = '3_LC_mission                  '
+scenario = '1_LC_level6_                  '
 while True:
     scenario_load.send_data([scenario, False, True, True, True, True, True, False])
     ego_data = ego.get_data()
@@ -137,7 +137,7 @@ while True:
         '''
         ego_status['link_index'] = LC_manager.set_ego_info(ego_status)
         front_target, right_target, log_index = LC_manager.set_veh_info_ego_cordinate(sur_data, LC_cnt)
-        print(LC_manager.target_idx)
+        # print(LC_manager.target_idx)
 
         if log_index == 1:
             data_log.append(sur_data)
@@ -195,7 +195,7 @@ while True:
                 if target_velocity < 40/3.6:
                     target_velocity = 40/3.6
         else:
-            target_velocity = 60/3.6
+            target_velocity = 80/3.6
 
         '''
         lateral controller
@@ -228,6 +228,8 @@ while True:
         else:
             accel_pedal = gas
         brake_pedal = brake
+        if brake_pedal > 0.5:
+            brake_pedal = 0.5
 
         ego_ctrl.send_data([ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
         # print(time.time()-init_time)
