@@ -276,7 +276,7 @@ class lane_changer:
                             v = np.sqrt(self.sur_data[index][veh_idx][12]**2 + self.sur_data[index][veh_idx][13]**2)
                             head = self.sur_data[index][veh_idx][5]
                             link = self.sur_data[index][veh_idx][-1]
-                            if link == 'not_detected':
+                            if link == 'not_detected' or link == 'LN00000':
                                 pass
                             else:
                                 link_index = self.mgeo_links.index(link)
@@ -323,11 +323,12 @@ class lane_changer:
                         if sur_pos_ego_cord[i,0]>0 and fr_cnt < 1:
                             fr_cnt = fr_cnt +1
                             self.front_target.append(data[i])
-                    elif '{'+link+'}' in self.right_links:
-                        if sur_pos_ego_cord[i,0]>0 and rf_cnt < 2:
-                            rf_cnt = rf_cnt + 1
-                            self.right_vehs.append(data[i])
-                        elif rr_cnt < 2:
+                    if '{'+link+'}' in self.right_links:
+                        if sur_pos_ego_cord[i,0]>-2:
+                            if rf_cnt < 1:
+                                rf_cnt = rf_cnt + 1
+                                self.right_vehs.append(data[i])
+                        elif rr_cnt < 0:
                             rr_cnt = rr_cnt + 1
                             self.right_vehs.append(data[i])
                 self.target_idx = [self.right_vehs[i][0] for i in range(len(self.right_vehs))]

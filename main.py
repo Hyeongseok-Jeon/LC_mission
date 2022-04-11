@@ -92,8 +92,12 @@ while True:
 # scenario_load.send_data(['test                          ', False, True, True, True, True, True, True])
 data_log = []
 data_time = []
+brake_stack = None
 
-
+LC_phase = 3
+LC_cnt = 0
+data_log = []
+data_time = []
 while True:
     '''
     get ego info
@@ -138,18 +142,19 @@ while True:
         ego_status['link_index'] = LC_manager.set_ego_info(ego_status)
         front_target, right_target, log_index = LC_manager.set_veh_info_ego_cordinate(sur_data, LC_cnt)
         # print(LC_manager.target_idx)
-
         if log_index == 1:
             data_log.append(sur_data)
             data_time.append(time.time())
 
         # print(len(front_target))
         prediction = LC_manager.prediction()
+        front_target_0 = [target for target in front_target if target[0] != 0]
+        front_target_1 = [target for target in right_target if target[0] != 0]
 
         '''
         calculate lane change path
         '''
-        if LC_cnt < 4:
+        if LC_cnt < 5:
             if ego_status['link_id'] == 'b40ad01a-81ba-4a82-b214-ea94d56bf98f' and LC_phase == 3:
                 LC_phase = 0
 
@@ -159,14 +164,34 @@ while True:
                 # if LC_cnt == 1:
                 #     break
                 global_path, global_link, LC_phase = LC_manager.get_lc_goal_cands(LC_phase)
+                front_target = front_target_0
 
             elif LC_phase == 1:
+                if len(front_target_0) == 0:
+                    if len(front_target_1) == 0:
+                        front_target = []
+                    else:
+                        front_target = front_target_1
+                else:
+                    if len(front_target_1) == 0:
+                        front_target = front_target_0
+                    else:
+                        if np.linalg.norm(front_target_0[0][2:4] - ego_pos) > np.linalg.norm(
+                                front_target_1[0][2:4] - ego_pos):
+                            front_target = front_target_1
+                        else:
+                            front_target = front_target_0
+
                 if '{' + ego_status['link_id'] + '}' in global_link:
                     dist_to_link = np.min(np.linalg.norm(np.asarray(mgeos[ego_status['link_index']]['points'])[:,:2] - np.asarray([ego_status['x'], ego_status['y']]), axis=1))
+
                     if dist_to_link < 0.3:
                         LC_phase = 0
         else:
+            front_target = front_target_0
             pass
+
+
         # from matplotlib import pyplot as plt
         # plt.scatter(np.asarray(global_path)[:,0], np.asarray(global_path)[:,1], s = 1)
         # plt.scatter(ego_status['x'], ego_status['y'])
@@ -182,20 +207,20 @@ while True:
         get target velocity
         '''
         if ego_status['link_id'] == 'ea2b8531-6438-4899-adf6-2f0e314c2203':
-            target_velocity = 30/3.6
+            target_velocity = 20/3.6
         elif ego_status['link_id'] == 'a78b6e70-6381-472a-bc5d-6827dfc83795':
-            target_velocity = 30/3.6
+            target_velocity = 20/3.6
         elif ego_status['link_id'] == 'e46e21cc-1ecc-42af-acc6-0822ece0a223':
-            target_velocity = 40/3.6
+            target_velocity = 20/3.6
         elif ego_status['link_id'] == '27d09adb-30e3-4d3e-8915-f72e2289871e':
             point = np.asarray([111.09992980957031, 337.95147705078125])
             if np.linalg.norm(point - ego_pos) < 50:
                 a = ((40/3.6)**2 - (ego_status['vel'])**2)/(2*np.linalg.norm(point - ego_pos))
                 target_velocity = ego_status['vel'] + 0.5*a
-                if target_velocity < 40/3.6:
-                    target_velocity = 40/3.6
+                if target_velocity < 20/3.6:
+                    target_velocity = 20/3.6
         else:
-            target_velocity = 80/3.6
+            target_velocity = 30/3.6
 
         '''
         lateral controller
@@ -205,12 +230,11 @@ while True:
         path_tracker.steering_angle()
         steering_angle_in_rad, lat_offset = path_tracker.get_output()
         steering_angle = -np.rad2deg(steering_angle_in_rad) / 36.25
-
         '''
         longitudinal controller
         '''
         if len(front_target)>0:
-            dist_to_front = np.linalg.norm(front_target[0][2:4] - ego_pos)
+            dist_to_front = np.linalg.norm(front_target[0][2:4] - ego_pos)-2
             state['integral_setpoint'] = 0
         else:
             dist_to_front = 500
@@ -228,8 +252,14 @@ while True:
         else:
             accel_pedal = gas
         brake_pedal = brake
-        if brake_pedal > 0.5:
-            brake_pedal = 0.5
+        if brake_pedal > 0.3:
+            brake_pedal = 0.3
+
+        if brake_stack == None:
+            brake_stack = brake_pedal
+        elif brake_pedal > brake_stack + 0.01:
+            brake_pedal = brake_stack + 0.01
+            brake_stack = brake_pedal
 
         ego_ctrl.send_data([ctrl_mode, Gear, cmd_type, send_velocity, acceleration, accel_pedal, brake_pedal, steering_angle])
         # print(time.time()-init_time)
@@ -286,26 +316,26 @@ while True:
         path_tracker = StanleyController()
         ego_status = dict()
         sur_status = dict()
-
-        while True:
-            scenario_load.send_data([scenario, False, True, True, True, True, True, False])
-            ego_data = ego.get_data()
-            if ego_data[-1] == 'ea2b8531-6438-4899-adf6-2f0e314c2203':
-                start_point = np.asarray([[ego_data[12], ego_data[13]]])
-                break
-
-        while True:
-            ego_parking(ego_ctrl)
-            ego_data = ego.get_data()
-            if ego_data[1] == 1:
-                break
-        state = None
-        LC_phase = 3
-        LC_cnt = 0
-        data_log = []
-        data_time = []
-        time.sleep(20)
-        print('scenario_gen')
+        #
+        # while True:
+        #     scenario_load.send_data([scenario, False, True, True, True, True, True, False])
+        #     ego_data = ego.get_data()
+        #     if ego_data[-1] == 'ea2b8531-6438-4899-adf6-2f0e314c2203':
+        #         start_point = np.asarray([[ego_data[12], ego_data[13]]])
+        #         break
+        #
+        # while True:
+        #     ego_parking(ego_ctrl)
+        #     ego_data = ego.get_data()
+        #     if ego_data[1] == 1:
+        #         break
+        # state = None
+        # LC_phase = 3
+        # LC_cnt = 0
+        # data_log = []
+        # data_time = []
+        # time.sleep(20)
+        # print('scenario_gen')
 
 #
 # from matplotlib import pyplot as plt
